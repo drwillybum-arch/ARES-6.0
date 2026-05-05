@@ -1,0 +1,25 @@
+# Environment
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+ENV/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ARES Data
+ui/conversations/
+core/logs/
+
+# IDEs
+.vscode/
+.idea/
+.DS_Store
