@@ -1,0 +1,6 @@
+Role: Info Processor
+Task: Summarize recent news and social media sentiment for the crypto market.
+Context: Focus on high-impact events (SEC rulings, ETF flows, major hacks).
+Input: RSS feeds or scraped news headlines.
+Output: Highlight the top 3 most important news items and their likely market impact.
+Format: JSON with "summary" and "sentiment" (-1 to 1).
