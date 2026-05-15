@@ -1,13 +1,10 @@
 import aiohttp
 import os
+from utils.hyperliquid_client import HyperliquidTestnet
 
 async def get_hyperliquid_funding(coin="BTC"):
-    async with aiohttp.ClientSession() as session:
-        async with session.post("https://api.hyperliquid.xyz/info", json={"type": "fundingHistory", "coin": coin}) as resp:
-            data = await resp.json()
-            if data:
-                return float(data[0]["fundingRate"])
-    return 0.0
+    client = HyperliquidTestnet()
+    return await client.get_funding_rate(coin)
 
 async def funding_arb_signal():
     rate = await get_hyperliquid_funding()
@@ -17,13 +14,15 @@ async def funding_arb_signal():
             "action": "short",
             "size_pct": float(os.getenv("RISK_PER_TRADE_PCT", 0.5)),
             "stop_loss": 1.05,   # 5% above entry for short
-            "take_profit": 0.99  # 1% below entry
+            "take_profit": 0.99, # 1% below entry
+            "atr": 0.0 # Placeholder for funding arb
         }
     elif rate < -0.0001:
         return {
             "action": "long",
             "size_pct": float(os.getenv("RISK_PER_TRADE_PCT", 0.5)),
             "stop_loss": 0.95,
-            "take_profit": 1.01
+            "take_profit": 1.01,
+            "atr": 0.0
         }
     return {"action": "hold"}
