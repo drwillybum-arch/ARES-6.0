@@ -10,7 +10,6 @@ class HyperliquidTestnet:
         self.private_key = os.getenv("HYPERLIQUID_TESTNET_PRIVATE_KEY")
         self.dry_run = os.getenv("DRY_RUN", "true").lower() == "true"
 
-        # Fallback to zero-address for info-only if keys missing
         wallet = self.wallet or "0x0000000000000000000000000000000000000000"
         key = self.private_key or "0x0000000000000000000000000000000000000000000000000000000000000000"
 
@@ -18,7 +17,6 @@ class HyperliquidTestnet:
         self.info = Info(base_url=constants.TESTNET_API_URL)
 
     async def get_wallet_balance(self):
-        """Fetch total margin account value"""
         if not self.wallet: return 10000.0
         loop = asyncio.get_running_loop()
         try:
@@ -29,7 +27,6 @@ class HyperliquidTestnet:
             return 10000.0
 
     async def get_open_positions(self):
-        """Fetch currently active positions"""
         if not self.wallet: return []
         loop = asyncio.get_running_loop()
         try:
@@ -45,7 +42,6 @@ class HyperliquidTestnet:
             return []
 
     async def get_candles(self, coin, interval, start_time=None, end_time=None):
-        """Fetch historical candle data (OHLCV)"""
         loop = asyncio.get_running_loop()
         try:
             return await loop.run_in_executor(None, self.info.candles_snapshot, coin, interval, start_time, end_time)
@@ -54,7 +50,6 @@ class HyperliquidTestnet:
             return []
 
     async def get_mid_price(self, coin):
-        """Fetch current mid price for a coin"""
         loop = asyncio.get_running_loop()
         try:
             all_mids = await loop.run_in_executor(None, self.info.all_mids)
@@ -64,7 +59,6 @@ class HyperliquidTestnet:
             return None
 
     async def get_funding_rate(self, coin):
-        """Fetch the latest funding rate"""
         loop = asyncio.get_running_loop()
         try:
             funding_history = await loop.run_in_executor(None, self.info.funding_history, coin)
@@ -75,10 +69,9 @@ class HyperliquidTestnet:
             print(f"Error fetching funding rate: {e}")
             return 0.0
 
-    async def place_order(self, symbol, side, size_pct, stop_loss=None):
-        """Execute a market order with specified size percentage of equity"""
+    async def place_order(self, symbol, side, size_pct):
         coin = symbol.split("-")[0]
-        is_buy = side == "long"
+        is_buy = (side == "long")
         try:
             price = await self.get_mid_price(coin)
             balance = await self.get_wallet_balance()
@@ -91,7 +84,6 @@ class HyperliquidTestnet:
                 return {"order_id": "dry_run", "status": "filled", "price": price, "size": sz}
 
             loop = asyncio.get_running_loop()
-            # Market open with 1% slippage tolerance
             order_result = await loop.run_in_executor(None, self.exchange.market_open, coin, is_buy, sz, price, 0.01)
 
             if order_result.get('status') == 'err':
@@ -102,18 +94,35 @@ class HyperliquidTestnet:
             print(f"Error placing order: {e}")
             return {"order_id": "error", "status": "failed", "error": str(e)}
 
-    async def update_stop_loss(self, coin, sz, stop_price):
-        """Update or place a new stop-loss trigger order"""
-        print(f"[STOP] Updating {coin} stop-loss to {stop_price:.2f}")
+    async def update_stop_loss(self, coin, sz, stop_price, side):
+        """Place a reduce-only stop-loss trigger order on the exchange"""
+        print(f"[STOP] Placing {coin} stop-loss at {stop_price:.2f} (Reduce-Only)")
         if self.dry_run:
             return True
 
         loop = asyncio.get_running_loop()
         try:
-            # Place a Trigger Order for stop loss
-            # Note: The SDK 'order' method can be used for Trigger orders by setting order_type
-            # For this production-spec build, we use the logical placeholder:
-            # result = await loop.run_in_executor(None, self.exchange.order, coin, False, sz, stop_price, {"trigger": {"triggerPx": stop_price, "isMarket": True, "tpsl": "sl"}})
+            # Stop order is on the opposite side of the position
+            # If we are LONG, stop is a SELL order.
+            is_buy = (side == "short")
+
+            # Using the trigger order parameters in the SDK
+            # 'order' method: coin, is_buy, sz, limit_px, order_type, reduce_only
+            # For a market stop-loss, we set the trigger parameters.
+            order_result = await loop.run_in_executor(
+                None,
+                self.exchange.order,
+                coin,
+                is_buy,
+                sz,
+                stop_price, # This is the trigger price
+                {"trigger": {"triggerPx": stop_price, "isMarket": True, "tpsl": "sl"}},
+                True # reduce_only=True
+            )
+
+            if order_result.get('status') == 'err':
+                print(f"Stop loss error: {order_result.get('response')}")
+                return False
             return True
         except Exception as e:
             print(f"Error updating stop loss: {e}")

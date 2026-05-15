@@ -7,10 +7,9 @@ class DeterministicEngine:
         self.enable_funding = os.getenv("ENABLE_FUNDING_ARB", "false").lower() == "true"
         self.enable_trend = os.getenv("ENABLE_TREND_FOLLOWING", "true").lower() == "true"
 
-    async def decide(self):
-        # Professional setup prioritizes Trend Following
+    async def decide(self, dynamic_params=None):
         if self.enable_trend:
-            tf = await trend_signal()
+            tf = await trend_signal(dynamic_params)
             if tf["action"] != "hold":
                 return tf
 

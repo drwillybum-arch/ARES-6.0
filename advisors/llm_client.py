@@ -15,7 +15,6 @@ class LLMAdvisor:
             self.client = AsyncAnthropic(api_key=self.api_key)
         else:
             self.client = None
-            print("LLM advisor disabled (no provider or key)")
 
         self.prompts = self._load_prompts()
 
@@ -35,9 +34,33 @@ class LLMAdvisor:
         selected_role = role if role in self.prompts else "macro_analyst"
         base_prompt = self.prompts.get(selected_role, "You are a crypto market analyst.")
 
-        market_context = json.dumps(market_data) if market_data else "BTC at ~$60k, funding rates moderate."
+        market_context = json.dumps(market_data) if market_data else "BTC at ~$60k."
 
-        prompt = f"{base_prompt}\n\nRecent market data: {market_context}. Provide your analysis in JSON format."
+        # New Agentic Tuning Prompt
+        prompt = f"""
+        {base_prompt}
+
+        Current market data: {market_context}
+
+        TASK:
+        1. Analyze market sentiment and volatility.
+        2. Provide a market summary.
+        3. Recommend specific trading parameters for our trend-following system:
+           - atr_multiplier: (Recommend 2.0 to 4.5 based on volatility)
+           - risk_pct: (Recommend 0.1 to 1.0 based on conviction)
+           - breakout_window: (Recommend 10 to 30)
+
+        Output MUST be valid JSON:
+        {{
+            "summary": "...",
+            "sentiment": 0.5,
+            "tuning": {{
+                "atr_multiplier": 3.0,
+                "risk_pct": 0.5,
+                "breakout_window": 20
+            }}
+        }}
+        """
 
         try:
             if self.provider == "openai":
@@ -50,7 +73,7 @@ class LLMAdvisor:
             elif self.provider == "anthropic":
                 resp = await self.client.messages.create(
                     model="claude-3-haiku-20240307",
-                    max_tokens=500,
+                    max_tokens=1000,
                     messages=[{"role": "user", "content": prompt}]
                 )
                 import re
@@ -58,15 +81,15 @@ class LLMAdvisor:
                 if match:
                     return json.loads(match.group())
         except Exception as e:
-            print(f"LLM advisor error for {selected_role}: {e}")
-        return {"summary": "Advisor unavailable", "sentiment": 0.0}
+            print(f"LLM advisor error: {e}")
+        return {"summary": "Advisor unavailable", "sentiment": 0.0, "tuning": {}}
 
     async def generate_daily_report(self, hourly_reports):
         if not self.client or not hourly_reports:
             return "Daily report unavailable."
 
         summary_text = "\n".join([f"- {r.get('summary')}" for r in hourly_reports])
-        prompt = f"Aggregate the following hourly market reports into a single, concise daily summary for a hedge fund manager:\n\n{summary_text}"
+        prompt = f"Aggregate these reports into a daily summary for a hedge fund manager:\n\n{summary_text}"
 
         try:
             if self.provider == "openai":
@@ -82,6 +105,5 @@ class LLMAdvisor:
                     messages=[{"role": "user", "content": prompt}]
                 )
                 return resp.content[0].text
-        except Exception as e:
-            print(f"Error generating daily report: {e}")
+        except: pass
         return "Failed to generate daily report."

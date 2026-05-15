@@ -11,30 +11,39 @@ def compute_atr(df, period=14):
     atr = tr.rolling(window=period).mean()
     return atr
 
-async def trend_signal():
+async def trend_signal(dynamic_params=None):
     """
-    Professional Trend Following Strategy
-    - Regime: Price > 200 SMA (approximated from shorter candles if needed)
-    - Entry: 20-period High breakout
-    - Stop: ATR-based trailing (Chandelier Exit)
+    Professional Trend Following Strategy with Dynamic Agentic Tuning
+    Fixed: Data mapping for Hyperliquid candle dictionary keys.
     """
     try:
+        # Default Parameters
+        atr_mult = 3.0
+        risk_pct = float(os.getenv("RISK_PER_TRADE_PCT", 0.5))
+        lookback = 20
+
+        # Apply Dynamic Agentic Overrides
+        if dynamic_params:
+            atr_mult = dynamic_params.get('atr_multiplier', atr_mult)
+            risk_pct = dynamic_params.get('risk_pct', risk_pct)
+            lookback = dynamic_params.get('breakout_window', lookback)
+
         client = HyperliquidTestnet()
-        # Fetch 4H candles for a broader view
         candles = await client.get_candles("BTC", "4h")
 
         if not candles or len(candles) < 200:
-            # Fallback to 1h if 4h not enough data
             candles = await client.get_candles("BTC", "1h")
             if not candles or len(candles) < 200:
                 return {"action": "hold"}
 
-        df = pd.DataFrame(candles, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+        # Hyperliquid SDK returns list of dicts: {'t': timestamp, 'o': open, 'h': high, 'l': low, 'c': close, 'v': volume}
+        df = pd.DataFrame(candles)
+        df = df.rename(columns={'t': 'timestamp', 'o': 'open', 'h': 'high', 'l': 'low', 'c': 'close', 'v': 'volume'})
+
         df['close'] = df['close'].astype(float)
         df['high'] = df['high'].astype(float)
         df['low'] = df['low'].astype(float)
 
-        # 1. Regime Detection (Bull Market Filter)
         df['sma200'] = df['close'].rolling(window=200).mean()
         df['sma50'] = df['close'].rolling(window=50).mean()
 
@@ -44,23 +53,21 @@ async def trend_signal():
         if not is_bull:
             return {"action": "hold", "reason": "non-bull regime"}
 
-        # 2. Entry Signal (Breakout)
-        df['hi20'] = df['high'].rolling(window=20).max()
+        df['hi_lookback'] = df['high'].rolling(window=int(lookback)).max()
         atr = compute_atr(df, 14)
         last_atr = atr.iloc[-1]
 
-        # Current price above previous 20-period high
-        if last['close'] >= df['hi20'].iloc[-2]:
-            risk_pct = float(os.getenv("RISK_PER_TRADE_PCT", 0.5))
-            # Chandelier Exit Initial Stop: Close - 3 * ATR
-            initial_stop = last['close'] - (3.0 * last_atr)
+        # Entry logic
+        if last['close'] >= df['hi_lookback'].iloc[-2]:
+            initial_stop = last['close'] - (atr_mult * last_atr)
 
             return {
                 "action": "long",
                 "size_pct": risk_pct,
                 "entry_price": last['close'],
                 "stop_loss": initial_stop,
-                "atr": last_atr
+                "atr": last_atr,
+                "atr_mult": atr_mult
             }
 
     except Exception as e:
@@ -69,6 +76,5 @@ async def trend_signal():
     return {"action": "hold"}
 
 def get_trailing_stop(current_price, current_stop, atr, multiplier=3.0):
-    """Calculates the new trailing stop price (ratchet only)"""
     new_stop = current_price - (multiplier * atr)
     return max(current_stop, new_stop)

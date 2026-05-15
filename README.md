@@ -1,24 +1,28 @@
-# McMoney: Autonomous Agentic Hedge Fund
+# McMoney v2.5: The Agentic AI Fund
 
-Fully automatic trading bot for Hyperliquid testnet with LLM advisors.
+McMoney is no longer just a trading bot; it is an **Autonomous Agentic Hedge Fund**. It bridges deterministic quantitative execution with LLM-powered reasoning to achieve a sustainable market edge.
 
-## Features
-- **Deterministic Engine**: Funding Arbitrage and Trend Following strategies.
-- **LLM Advisors**: Hourly analysis from multiple specialized agents (Finance Manager, Technical Analyst, Macro Analyst, etc.).
-- **Daily Reporting**: Aggregated market summaries sent to Telegram at 00:00 UTC.
-- **Risk Management**: Automated daily loss limit halting based on actual exchange balance.
-- **Telegram Control**: Monitor and control via `/status`, `/pause`, and `/resume`.
+## 🚀 The AI "Win": Agentic Meta-Optimization
+Unlike static bots that decay as market regimes change, McMoney uses an LLM-Agentic layer to:
+1. **Analyze Volatility**: Adjusts ATR multipliers live to avoid being "stopped out" during fake-outs.
+2. **Gauge Sentiment**: Scales risk up/down based on macro sentiment and news.
+3. **Optimize Entries**: Dynamically tunes breakout windows to match the current trend speed.
 
-## Setup
-1. Clone the repo.
-2. Copy `.env.example` to `.env` and fill in your keys.
-3. Deploy to Railway or run via Docker:
-   ```bash
-   docker-compose up --build
-   ```
+## 🧠 Architecture
+- **Deterministic Core**: ATR Trailing Stops, 200 SMA Regime Filter, Donchian Breakouts.
+- **Agentic Brain**: GPT-4o-mini / Claude 3 Haiku providing hourly parameter tuning.
+- **Execution**: Hyperliquid Testnet (High-speed, low-fee).
 
-## Requirements
-- Python 3.11+
-- Hyperliquid Testnet Account
-- Telegram Bot Token
-- OpenAI or Anthropic API Key (Optional)
+## 📊 Strategy: Asymmetric Trend Capture
+- **Upside**: Unlimited. We ratchet stops higher but never set take-profits.
+- **Downside**: Strictly limited by Chandelier Exit (ATR-based) and a 4-5% daily drawdown circuit breaker.
+
+## 🛠️ Getting Started
+1. **Setup**: `pip install -r requirements.txt`
+2. **Configure**: Fill `.env` with Telegram and Hyperliquid keys.
+3. **Deploy**: `docker-compose up --build` or deploy one-click to Railway.
+
+## 📈 Roadmap
+- **v2.0**: Professional Trend-Following.
+- **v2.5**: **Agentic Parameter Optimization** (Current).
+- **v3.0**: Multi-Agent Factor Discovery & Portfolio Rebalancing.
