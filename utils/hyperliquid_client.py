@@ -69,6 +69,15 @@ class HyperliquidTestnet:
             print(f"Error fetching funding rate: {e}")
             return 0.0
 
+    async def get_l2_snapshot(self, coin):
+        """Fetch L2 Order Book Snapshot"""
+        loop = asyncio.get_running_loop()
+        try:
+            return await loop.run_in_executor(None, self.info.l2_snapshot, coin)
+        except Exception as e:
+            print(f"Error fetching L2 snapshot: {e}")
+            return None
+
     async def place_order(self, symbol, side, size_pct):
         coin = symbol.split("-")[0]
         is_buy = (side == "long")
@@ -95,31 +104,22 @@ class HyperliquidTestnet:
             return {"order_id": "error", "status": "failed", "error": str(e)}
 
     async def update_stop_loss(self, coin, sz, stop_price, side):
-        """Place a reduce-only stop-loss trigger order on the exchange"""
         print(f"[STOP] Placing {coin} stop-loss at {stop_price:.2f} (Reduce-Only)")
         if self.dry_run:
             return True
-
         loop = asyncio.get_running_loop()
         try:
-            # Stop order is on the opposite side of the position
-            # If we are LONG, stop is a SELL order.
             is_buy = (side == "short")
-
-            # Using the trigger order parameters in the SDK
-            # 'order' method: coin, is_buy, sz, limit_px, order_type, reduce_only
-            # For a market stop-loss, we set the trigger parameters.
             order_result = await loop.run_in_executor(
                 None,
                 self.exchange.order,
                 coin,
                 is_buy,
                 sz,
-                stop_price, # This is the trigger price
+                stop_price,
                 {"trigger": {"triggerPx": stop_price, "isMarket": True, "tpsl": "sl"}},
-                True # reduce_only=True
+                True
             )
-
             if order_result.get('status') == 'err':
                 print(f"Stop loss error: {order_result.get('response')}")
                 return False

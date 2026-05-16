@@ -13,21 +13,26 @@ We have implemented a three-tier architecture inspired by top open-source bots (
 
 ### Tier 2: Agentic Meta-Layer (The Brain)
 - **MCP Context Server**: Centralized aggregator of technicals, macro, and news.
-- **Signal Compression**: Token-efficient JSON feeds that provide the LLM with maximum info in minimum context.
-- **Short-Term Memory**: The LLM remembers its recent decisions to avoid flip-flopping.
+- **Signal Compression**: Token-efficient JSON feeds.
+- **Short-Term Memory**: The LLM remembers its recent decisions.
 - **Dynamic Tuning**: AI adjusts ATR multipliers, risk percentages, and breakout windows live.
 
-### Tier 3: Cross-Asset Correlation (The Edge)
-- **Macro Overlay**: Monitoring SPY, DXY, and US10Y to identify crypto-friendly regimes.
-- **Sentiment Weighting**: (Roadmap) Integrating LunarCrush and Santiment APIs.
+### Tier 3: World-Class R&D (The Vision)
+To achieve world-class status (Sharpe > 1.5, $100M+ AUM), we are moving toward:
+1. **Proprietary Data**: Integrating order book depth and historical tick data.
+2. **Infrastructure**: Moving toward VPS co-location (<1ms from exchange matching).
+3. **Neuro-Symbolic Agents**: Combining RL for execution with symbolic reasoning for risk.
+4. **Order Flow Imbalance (OBI)**: Decoding hidden liquidity and detecting iceberg orders.
+5. **Real-time VaR**: Recalculating Value-at-Risk every millisecond.
 
 ## 3. "Stolen" Best Practices
 - **Hummingbot-style Gateway**: Centralized `MarketContextServer`.
-- **FreqAI-style Adaptation**: Dynamic `tuning` parameters from the LLM.
-- **FinRobot-style Multi-Agent**: Specialized prompt roles for different market analysis.
+- **FreqAI-style Adaptation**: Dynamic `tuning` parameters.
+- **FinRobot-style Multi-Agent**: Specialized prompt roles.
 
-## 4. Roadmap to v3.0
-- [x] v2.5: **Agentic Parameter Optimization**.
-- [x] v2.6: **MCP Context Server & Signal Compression**.
-- [ ] v2.7: **Backtesting Hook Integration** (Jesse-style).
-- [ ] v3.0: **Full Strategy Evolution** (AI proposes and tests new code).
+## 4. Roadmap to v3.0 (The Institution)
+- [x] v2.5: Agentic Parameter Optimization.
+- [x] v2.6: MCP Context Server & Signal Compression.
+- [x] v2.7: **Order Flow Imbalance (OBI) & Market Microstructure**.
+- [ ] v2.8: **Co-located Low-Latency Execution & VPS Migration**.
+- [ ] v3.0: **Full Neuro-Symbolic Autonomy**.

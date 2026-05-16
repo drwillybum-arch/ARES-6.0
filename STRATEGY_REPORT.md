@@ -1,44 +1,33 @@
-# McMoney v2.0: Asymmetric Trend-Following System
+# McMoney v2.7: The Microstructure-Aware AI Fund
 
-## 1. Executive Summary & Expected Performance
-The McMoney v2.0 system is a professional-grade quantitative trading system designed for Hyperliquid perpetuals. It focuses on capturing outsized gains during confirmed crypto bull markets while maintaining a strictly defined downside through an ATR-based trailing stop (Chandelier Exit).
+## 1. Executive Summary
+McMoney v2.7 introduces **Market Microstructure Analysis** through Order Book Imbalance (OBI). It now moves from simple trend-following to a multi-stage execution model that requires order-flow confirmation for all high-conviction trades.
 
-- **Expected Sharpe**: 0.8 - 1.2 (in bull regimes)
-- **Max Drawdown Target**: < 15%
-- **Profit Factor**: > 1.5
+## 2. World-Class Regime Detection
+- **Macro**: Price > 200 SMA (Daily) + 50 SMA > 200 SMA.
+- **Microstructure**: Order Book Imbalance (OBI) > 0.3 for Longs, < -0.3 for Shorts.
+- **Symbolic Layer**: LLM Advisor provides a symbolic overlay to detect "Bull Traps" or "Liquidity Grabs" by analyzing OBI vs Price Action.
 
-## 2. Bull Market Filter Specification
-The system uses a multi-stage regime detection filter to ensure trades are only executed during high-conviction uptrends.
-- **Primary Filter**: `Price > 200 SMA (Daily)`
-- **Momentum Filter**: `50 SMA > 200 SMA`
-- **Vol Filter**: `Funding Rate < 0.05%` (to avoid peak euphoria/over-leverage)
+## 3. Order Flow Imbalance (OBI) Logic
+We analyze the top 5 levels of the L2 Order Book:
+`OBI = (Bid Volume - Ask Volume) / (Bid Volume + Ask Volume)`
+A high OBI indicates significant hidden buy pressure, acting as a "lead indicator" for immediate price direction.
 
-## 3. Entry Rules
-- **Asset Universe**: BTC, ETH.
-- **Signal**: 20-period Donchian Channel High Breakout on the 4H timeframe.
-- **Confirmation**: Price closing above the previous 20-period high.
+## 4. Neuro-Symbolic Architecture
+- **Neuro**: RL-inspired parameter tuning (via LLM).
+- **Symbolic**: Deterministic trend rules + microstructure filters.
+This hybrid approach mimics institutional desks by combining high-speed rules with adaptive, qualitative reasoning.
 
-## 4. Trailing Stop & Risk Engine
-The core of the system is the "Rachet" Trailing Stop, based on the Chandelier Exit.
-- **Initial Stop**: `Entry Price - (3.0 * 14-period ATR)`
-- **Trailing Logic**: As price moves higher, the stop is updated to `MAX(Current Stop, Current Price - 3.0 * ATR)`.
-- **Exit**: Position is closed only when the trailing stop is hit or the daily loss limit (4%) is triggered.
-
-## 5. Complete System Parameters
+## 5. Strategy Parameters
 | Parameter | Value |
 |-----------|-------|
+| OBI Threshold | 0.3 (30% imbalance) |
 | Risk Per Trade | 0.5% of Equity |
-| Max Concurrent Positions | 3 |
-| ATR Period | 14 |
-| ATR Multiplier | 3.0 |
-| Regime Window | 200 |
-| Breakout Window | 20 |
+| Stop Loss | ATR x 3.0 (Chandelier Exit) |
+| Max Leverge | 3x - 5x (Target) |
 
-## 6. Deployment & Monitoring
-Deployed via Railway using Docker. Monitoring is conducted 24/7 through a Telegram Bot providing:
-- Real-time "Ratchet" alerts.
-- Daily aggregate market analysis via LLM advisor.
-- `/status` command for current equity and active stops.
-
-## 7. Psychological Edge
-By removing fixed take-profits, the system removes the human tendency to "sell winners too early." It allows the mathematical probability of a "parabolic run" to fully play out while ensuring that any reversal is caught within a 3xATR volatility window.
+## 6. Deployment Roadmap
+- [x] v2.6: Agentic Context Aggregation.
+- [x] v2.7: **Microstructure (OBI) & Confirmation Filters**.
+- [ ] v2.8: **Websocket-based OBI Tracking (Low Latency)**.
+- [ ] v3.0: **Full Neuro-Symbolic Institutional Fund**.
