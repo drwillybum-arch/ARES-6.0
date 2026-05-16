@@ -1,35 +1,33 @@
 # ALPHA ROADMAP: The Path to Market Dominance
 
-To transform McMoney from a high-quality bot into a "Powerful AI Tool" that actually wins in the market, we must move beyond static trend-following into **Agentic Meta-Optimization**.
-
 ## 1. The Core Problem: The "Static Decay"
-Most trading bots lose because their parameters (ATR multipliers, SMA windows, breakout periods) are static. The market's volatility regime changes weekly, making static rules obsolete.
+Most trading bots lose because their parameters are static. The market's volatility regime changes weekly, making static rules obsolete.
 
-## 2. The Solution: The Agentic Meta-Layer
-We are implementing a three-tier architecture to achieve a sustainable market edge:
+## 2. The Solution: McMoney v2.6 Agentic Core
+We have implemented a three-tier architecture inspired by top open-source bots (Freqtrade, Hummingbot) and agentic research (FinRobot).
 
 ### Tier 1: Deterministic Guardrails (The Shield)
-- Hyperliquid Execution (Fast, Low Fee).
-- Hard Stop Losses (Survival).
-- Daily Drawdown Circuit Breakers.
+- **Hyperliquid Execution**: Fast, low-fee, native MEV protection.
+- **Rachet Trailing Stops**: Real-time stop-loss management based on volatility.
+- **Circuit Breakers**: Daily drawdown limits enforced by exchange balance.
 
-### Tier 2: Agentic Parameter Tuning (The Brain)
-- **Sentiment Agent**: Analyzes X (Twitter), Farcaster, and News to gauge "Euphoria" vs "Fear".
-- **Vol-Regime Agent**: Analyzes 1H vs 1D volatility to recommend ATR multipliers.
-- **Correlation Agent**: Monitors ETH/BTC and DXY to adjust position heat.
-- **The "Brain" Agent**: Aggregates T2 inputs and updates the `config.json` parameters live.
+### Tier 2: Agentic Meta-Layer (The Brain)
+- **MCP Context Server**: Centralized aggregator of technicals, macro, and news.
+- **Signal Compression**: Token-efficient JSON feeds that provide the LLM with maximum info in minimum context.
+- **Short-Term Memory**: The LLM remembers its recent decisions to avoid flip-flopping.
+- **Dynamic Tuning**: AI adjusts ATR multipliers, risk percentages, and breakout windows live.
 
-### Tier 3: Factor Discovery (The Alpha)
-- Using LLMs to read technical whitepapers and on-chain flow data to identify new "Lead Indicators" (e.g., CEX-to-DEX flows, whale wallet tracking).
+### Tier 3: Cross-Asset Correlation (The Edge)
+- **Macro Overlay**: Monitoring SPY, DXY, and US10Y to identify crypto-friendly regimes.
+- **Sentiment Weighting**: (Roadmap) Integrating LunarCrush and Santiment APIs.
 
-## 3. Technical Requirements for "Winning"
-1. **Low-Latency Feedback**: Moving from 1H intervals to 1-minute real-time websocket monitoring.
-2. **Sentiment Weighting**: Integrating high-quality sentiment APIs (LunarCrush, Santiment).
-3. **Dynamic Pyramiding**: Allowing the AI to increase size only when multi-agent conviction is > 80%.
-4. **MEV Awareness**: Routing trades to avoid toxic flow and sandwich attacks on-chain (using Hyperliquid's native protection).
+## 3. "Stolen" Best Practices
+- **Hummingbot-style Gateway**: Centralized `MarketContextServer`.
+- **FreqAI-style Adaptation**: Dynamic `tuning` parameters from the LLM.
+- **FinRobot-style Multi-Agent**: Specialized prompt roles for different market analysis.
 
-## 4. Roadmap to v3.0 (Autonomous AI Fund)
-- [x] v1: Autonomous Execution (Deterministic).
-- [x] v2: Professional Trend-Following + LLM Advisors.
-- [ ] v2.5: **Dynamic Parameter Tuning** (AI adjusts ATR/Risk live).
-- [ ] v3: **Full Agentic Autonomy** (AI proposes new strategies, backtests them, and deploys).
+## 4. Roadmap to v3.0
+- [x] v2.5: **Agentic Parameter Optimization**.
+- [x] v2.6: **MCP Context Server & Signal Compression**.
+- [ ] v2.7: **Backtesting Hook Integration** (Jesse-style).
+- [ ] v3.0: **Full Strategy Evolution** (AI proposes and tests new code).

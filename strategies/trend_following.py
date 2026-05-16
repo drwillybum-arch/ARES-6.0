@@ -14,15 +14,12 @@ def compute_atr(df, period=14):
 async def trend_signal(dynamic_params=None):
     """
     Professional Trend Following Strategy with Dynamic Agentic Tuning
-    Fixed: Data mapping for Hyperliquid candle dictionary keys.
     """
     try:
-        # Default Parameters
         atr_mult = 3.0
         risk_pct = float(os.getenv("RISK_PER_TRADE_PCT", 0.5))
         lookback = 20
 
-        # Apply Dynamic Agentic Overrides
         if dynamic_params:
             atr_mult = dynamic_params.get('atr_multiplier', atr_mult)
             risk_pct = dynamic_params.get('risk_pct', risk_pct)
@@ -36,7 +33,6 @@ async def trend_signal(dynamic_params=None):
             if not candles or len(candles) < 200:
                 return {"action": "hold"}
 
-        # Hyperliquid SDK returns list of dicts: {'t': timestamp, 'o': open, 'h': high, 'l': low, 'c': close, 'v': volume}
         df = pd.DataFrame(candles)
         df = df.rename(columns={'t': 'timestamp', 'o': 'open', 'h': 'high', 'l': 'low', 'c': 'close', 'v': 'volume'})
 
@@ -57,7 +53,6 @@ async def trend_signal(dynamic_params=None):
         atr = compute_atr(df, 14)
         last_atr = atr.iloc[-1]
 
-        # Entry logic
         if last['close'] >= df['hi_lookback'].iloc[-2]:
             initial_stop = last['close'] - (atr_mult * last_atr)
 
@@ -75,6 +70,11 @@ async def trend_signal(dynamic_params=None):
 
     return {"action": "hold"}
 
-def get_trailing_stop(current_price, current_stop, atr, multiplier=3.0):
-    new_stop = current_price - (multiplier * atr)
-    return max(current_stop, new_stop)
+def get_trailing_stop(current_price, current_stop, atr, multiplier=3.0, side="long"):
+    """Calculates the new trailing stop price (ratchet only)"""
+    if side == "long":
+        new_stop = current_price - (multiplier * atr)
+        return max(current_stop, new_stop)
+    else: # short
+        new_stop = current_price + (multiplier * atr)
+        return min(current_stop, new_stop)

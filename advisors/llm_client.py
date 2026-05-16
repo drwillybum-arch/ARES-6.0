@@ -27,37 +27,31 @@ class LLMAdvisor:
                 prompts[role] = f.read()
         return prompts
 
-    async def analyze(self, role=None, market_data=None):
+    async def analyze(self, role=None, market_context=None, memory=None):
+        """
+        Hyper-efficient Agentic Analysis.
+        Uses compressed JSON context and short-term memory.
+        """
         if not self.client:
-            return {"summary": "LLM advisor not configured", "sentiment": 0.0}
+            return {"summary": "LLM offline", "sentiment": 0.0}
 
         selected_role = role if role in self.prompts else "macro_analyst"
-        base_prompt = self.prompts.get(selected_role, "You are a crypto market analyst.")
+        base_prompt = self.prompts.get(selected_role, "You are a quant advisor.")
 
-        market_context = json.dumps(market_data) if market_data else "BTC at ~$60k."
-
-        # New Agentic Tuning Prompt
+        # Compressed prompt engineering
         prompt = f"""
         {base_prompt}
+        MEM: {memory}
+        CTX: {market_context}
 
-        Current market data: {market_context}
-
-        TASK:
-        1. Analyze market sentiment and volatility.
-        2. Provide a market summary.
-        3. Recommend specific trading parameters for our trend-following system:
-           - atr_multiplier: (Recommend 2.0 to 4.5 based on volatility)
-           - risk_pct: (Recommend 0.1 to 1.0 based on conviction)
-           - breakout_window: (Recommend 10 to 30)
-
-        Output MUST be valid JSON:
+        REQ: Analyze CTX+MEM. Output ONLY JSON:
         {{
             "summary": "...",
-            "sentiment": 0.5,
+            "sentiment": float,
             "tuning": {{
-                "atr_multiplier": 3.0,
-                "risk_pct": 0.5,
-                "breakout_window": 20
+                "atr_multiplier": float,
+                "risk_pct": float,
+                "breakout_window": int
             }}
         }}
         """
@@ -81,15 +75,16 @@ class LLMAdvisor:
                 if match:
                     return json.loads(match.group())
         except Exception as e:
-            print(f"LLM advisor error: {e}")
-        return {"summary": "Advisor unavailable", "sentiment": 0.0, "tuning": {}}
+            print(f"LLM error: {e}")
+        return {"summary": "Error", "sentiment": 0.0}
 
     async def generate_daily_report(self, hourly_reports):
         if not self.client or not hourly_reports:
-            return "Daily report unavailable."
+            return "No data."
 
-        summary_text = "\n".join([f"- {r.get('summary')}" for r in hourly_reports])
-        prompt = f"Aggregate these reports into a daily summary for a hedge fund manager:\n\n{summary_text}"
+        # Compress hourly reports into a list of summaries
+        summary_list = [r.get('summary', '') for r in hourly_reports]
+        prompt = f"Summarize these market events concisely:\n{json.dumps(summary_list)}"
 
         try:
             if self.provider == "openai":
@@ -106,4 +101,4 @@ class LLMAdvisor:
                 )
                 return resp.content[0].text
         except: pass
-        return "Failed to generate daily report."
+        return "Daily summary failed."
