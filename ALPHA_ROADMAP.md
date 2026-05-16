@@ -3,36 +3,29 @@
 ## 1. The Core Problem: The "Static Decay"
 Most trading bots lose because their parameters are static. The market's volatility regime changes weekly, making static rules obsolete.
 
-## 2. The Solution: McMoney v2.6 Agentic Core
-We have implemented a three-tier architecture inspired by top open-source bots (Freqtrade, Hummingbot) and agentic research (FinRobot).
+## 2. The Solution: McMoney v2.8 Agentic Core
+We have implemented a robust agentic architecture inspired by *Architecting Goal-Driven Systems* (2026).
 
 ### Tier 1: Deterministic Guardrails (The Shield)
-- **Hyperliquid Execution**: Fast, low-fee, native MEV protection.
-- **Rachet Trailing Stops**: Real-time stop-loss management based on volatility.
-- **Circuit Breakers**: Daily drawdown limits enforced by exchange balance.
+- **Hard Tool Contracts**: Validated schemas and "outside the model" risk limits.
+- **Circuit Breakers**: Halts on daily drawdown or consecutive execution failures.
+- **Rachet Trailing Stops**: Real-time stop-loss management.
 
 ### Tier 2: Agentic Meta-Layer (The Brain)
-- **MCP Context Server**: Centralized aggregator of technicals, macro, and news.
-- **Signal Compression**: Token-efficient JSON feeds.
-- **Short-Term Memory**: The LLM remembers its recent decisions.
-- **Dynamic Tuning**: AI adjusts ATR multipliers, risk percentages, and breakout windows live.
+- **Planner-Executor-Reflector (PER) Loop**: Decomposes goals into planned steps, executes via tools, and reflects on outcomes.
+- **Memory Architecture**:
+  - **Short-term**: Current context.
+  - **Episodic**: Log of past trades and their outcomes.
+  - **Semantic**: Verified market facts and domain knowledge.
+- **Dynamic Tuning**: AI adjusts ATR multipliers and risk percentages.
 
 ### Tier 3: World-Class R&D (The Vision)
-To achieve world-class status (Sharpe > 1.5, $100M+ AUM), we are moving toward:
-1. **Proprietary Data**: Integrating order book depth and historical tick data.
-2. **Infrastructure**: Moving toward VPS co-location (<1ms from exchange matching).
-3. **Neuro-Symbolic Agents**: Combining RL for execution with symbolic reasoning for risk.
-4. **Order Flow Imbalance (OBI)**: Decoding hidden liquidity and detecting iceberg orders.
-5. **Real-time VaR**: Recalculating Value-at-Risk every millisecond.
+1. **Proprietary Data**: Order book imbalance (OBI) and microstructure signals.
+2. **Infrastructure**: VPS co-location (<1ms).
+3. **Neuro-Symbolic Hybrid**: Combining RL with symbolic risk reasoning.
 
-## 3. "Stolen" Best Practices
-- **Hummingbot-style Gateway**: Centralized `MarketContextServer`.
-- **FreqAI-style Adaptation**: Dynamic `tuning` parameters.
-- **FinRobot-style Multi-Agent**: Specialized prompt roles.
-
-## 4. Roadmap to v3.0 (The Institution)
-- [x] v2.5: Agentic Parameter Optimization.
-- [x] v2.6: MCP Context Server & Signal Compression.
-- [x] v2.7: **Order Flow Imbalance (OBI) & Market Microstructure**.
-- [ ] v2.8: **Co-located Low-Latency Execution & VPS Migration**.
-- [ ] v3.0: **Full Neuro-Symbolic Autonomy**.
+## 3. roadmap to v3.0
+- [x] v2.7: Microstructure (OBI) & Confirmation Filters.
+- [x] v2.8: **Planner-Executor-Reflector Loop & Memory Architecture**.
+- [ ] v2.9: **Websocket-based OBI & Real-time Context Feeding**.
+- [ ] v3.0: **Full Neuro-Symbolic Institutional Fund**.

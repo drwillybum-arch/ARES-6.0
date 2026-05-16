@@ -5,10 +5,17 @@ from hyperliquid.exchange import Exchange
 from hyperliquid.utils import constants
 
 class HyperliquidTestnet:
+    """
+    Hyperliquid Tool with Strict Contracts and Guardrails.
+    As per Nagasubramanian (2026).
+    """
     def __init__(self):
         self.wallet = os.getenv("HYPERLIQUID_TESTNET_WALLET")
         self.private_key = os.getenv("HYPERLIQUID_TESTNET_PRIVATE_KEY")
         self.dry_run = os.getenv("DRY_RUN", "true").lower() == "true"
+
+        # Guardrail: Maximum Risk Per Trade (Hard-coded outside the model)
+        self.MAX_RISK_PCT = 2.0
 
         wallet = self.wallet or "0x0000000000000000000000000000000000000000"
         key = self.private_key or "0x0000000000000000000000000000000000000000000000000000000000000000"
@@ -41,10 +48,11 @@ class HyperliquidTestnet:
             print(f"Error fetching positions: {e}")
             return []
 
-    async def get_candles(self, coin, interval, start_time=None, end_time=None):
+    async def get_candles(self, coin, interval):
+        """Tool Contract: Returns list of candles or empty list."""
         loop = asyncio.get_running_loop()
         try:
-            return await loop.run_in_executor(None, self.info.candles_snapshot, coin, interval, start_time, end_time)
+            return await loop.run_in_executor(None, self.info.candles_snapshot, coin, interval, None, None)
         except Exception as e:
             print(f"Error fetching candles: {e}")
             return []
@@ -58,19 +66,7 @@ class HyperliquidTestnet:
             print(f"Error fetching mid price: {e}")
             return None
 
-    async def get_funding_rate(self, coin):
-        loop = asyncio.get_running_loop()
-        try:
-            funding_history = await loop.run_in_executor(None, self.info.funding_history, coin)
-            if funding_history:
-                return float(funding_history[0]['fundingRate'])
-            return 0.0
-        except Exception as e:
-            print(f"Error fetching funding rate: {e}")
-            return 0.0
-
     async def get_l2_snapshot(self, coin):
-        """Fetch L2 Order Book Snapshot"""
         loop = asyncio.get_running_loop()
         try:
             return await loop.run_in_executor(None, self.info.l2_snapshot, coin)
@@ -79,15 +75,25 @@ class HyperliquidTestnet:
             return None
 
     async def place_order(self, symbol, side, size_pct):
+        """
+        Tool Contract: Executes market order.
+        Guardrail: Enforces MAX_RISK_PCT and validates side.
+        """
+        if side not in ["long", "short"]:
+            raise ValueError(f"Invalid side: {side}")
+
+        # Enforce hard risk guardrail outside the model
+        safe_size_pct = min(float(size_pct), self.MAX_RISK_PCT)
+
         coin = symbol.split("-")[0]
         is_buy = (side == "long")
         try:
             price = await self.get_mid_price(coin)
             balance = await self.get_wallet_balance()
-            usd_size = balance * (size_pct / 100.0)
+            usd_size = balance * (safe_size_pct / 100.0)
             sz = usd_size / price
 
-            print(f"[ORDER] {side.upper()} {coin} | Size: {sz:.4f} | Price: {price}")
+            print(f"[TOOL] {side.upper()} {coin} | sz: {sz:.4f} | risk: {safe_size_pct}%")
 
             if self.dry_run:
                 return {"order_id": "dry_run", "status": "filled", "price": price, "size": sz}
@@ -98,15 +104,14 @@ class HyperliquidTestnet:
             if order_result.get('status') == 'err':
                 raise Exception(order_result.get('response'))
 
-            return {"order_id": "executed", "status": "filled", "price": price, "size": sz, "response": order_result}
+            return {"order_id": "executed", "status": "filled", "price": price, "size": sz}
         except Exception as e:
             print(f"Error placing order: {e}")
             return {"order_id": "error", "status": "failed", "error": str(e)}
 
     async def update_stop_loss(self, coin, sz, stop_price, side):
-        print(f"[STOP] Placing {coin} stop-loss at {stop_price:.2f} (Reduce-Only)")
-        if self.dry_run:
-            return True
+        """Tool Contract: Updates stop loss trigger order."""
+        if self.dry_run: return True
         loop = asyncio.get_running_loop()
         try:
             is_buy = (side == "short")
@@ -120,10 +125,7 @@ class HyperliquidTestnet:
                 {"trigger": {"triggerPx": stop_price, "isMarket": True, "tpsl": "sl"}},
                 True
             )
-            if order_result.get('status') == 'err':
-                print(f"Stop loss error: {order_result.get('response')}")
-                return False
-            return True
+            return order_result.get('status') != 'err'
         except Exception as e:
             print(f"Error updating stop loss: {e}")
             return False

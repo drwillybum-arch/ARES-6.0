@@ -12,6 +12,7 @@ from utils.telegram_bot import TelegramBot
 from advisors.llm_client import LLMAdvisor
 from utils.logger import HedgeFundLogger
 from utils.context_server import MarketContextServer
+from utils.memory import AgentMemory
 
 load_dotenv()
 
@@ -23,14 +24,21 @@ class AutonomousHedgeFund:
         self.telegram = TelegramBot()
         self.advisor = LLMAdvisor()
         self.logger = HedgeFundLogger()
+        self.memory = AgentMemory()
+
         self.is_paused = False
         self.daily_start_balance = None
         self.daily_loss_limit = float(os.getenv("DAILY_LOSS_LIMIT_PCT", 5))
         self.hourly_reports = []
-        self.history_logs = []
         self.state_file = os.path.join(os.getenv("LOG_DIR", "/app/data"), "state.json")
         self.active_stops = self._load_state()
         self.dynamic_params = {}
+
+        # Guardrails: Loop prevention and progress tracking
+        self.step_counter = 0
+        self.consecutive_failures = 0
+        self.MAX_CONSECUTIVE_FAILURES = 5
+        self.last_action_ts = None
 
     def _load_state(self):
         if os.path.exists(self.state_file):
@@ -58,6 +66,82 @@ class AutonomousHedgeFund:
             return True
         return False
 
+    async def plan_step(self):
+        """PLANNER: Generates the context and tunes parameters."""
+        try:
+            market_context = await self.context_server.get_compressed_context()
+            memory_context = self.memory.get_context_string()
+
+            advisor_report = await self.advisor.analyze(
+                market_context=market_context,
+                memory=json.dumps(memory_context)
+            )
+            self.hourly_reports.append(advisor_report)
+            await self.logger.log_advisor_report(advisor_report)
+
+            self.dynamic_params = advisor_report.get('tuning', {})
+            return advisor_report
+        except Exception as e:
+            print(f"Planning failure: {e}")
+            return {"summary": "Failed to plan", "tuning": {}}
+
+    async def execute_step(self):
+        """EXECUTOR: Carries out trading actions."""
+        try:
+            # 1. Manage existing positions
+            await self.manage_positions()
+
+            # 2. Check for new entries
+            decision = await self.engine.decide(dynamic_params=self.dynamic_params)
+
+            outcome = "No Action"
+            if decision["action"] in ["long", "short"]:
+                positions = await self.exchange.get_open_positions()
+                if not any(p['coin'] == "BTC" for p in positions):
+                    order = await self.exchange.place_order(
+                        symbol="BTC-USDT",
+                        side=decision["action"],
+                        size_pct=decision["size_pct"]
+                    )
+
+                    if order.get("status") == "filled":
+                        self.active_stops["BTC"] = {
+                            "stop_price": decision["stop_loss"],
+                            "atr": decision.get("atr", 0),
+                            "atr_mult": decision.get("atr_mult", 3.0)
+                        }
+                        self._save_state()
+                        await self.exchange.update_stop_loss("BTC", order.get("size", 0), decision["stop_loss"], decision["action"])
+
+                        outcome = f"Executed {decision['action']}"
+                        self.last_action_ts = datetime.utcnow()
+                        await self.logger.log_trade(decision, order)
+                        await self.telegram.send_message(f"🚀 *AI-Trade*: {decision['action'].upper()} BTC")
+                    else:
+                        outcome = f"Execution failed: {order.get('error')}"
+
+            self.consecutive_failures = 0 # Reset on success
+            return {"action": decision["action"], "outcome": outcome}
+
+        except Exception as e:
+            self.consecutive_failures += 1
+            print(f"Execution failure ({self.consecutive_failures}): {e}")
+            return {"action": "hold", "outcome": f"Error: {e}"}
+
+    async def reflect_step(self, plan_report, exec_result):
+        """REFLECTOR: Quality checks and updates memory."""
+        action = exec_result["action"]
+        outcome = exec_result["outcome"]
+
+        # Log episode to memory
+        self.memory.add_episodic(f"Goal: Trade BTC | Plan: {plan_report.get('summary')[:50]}", outcome)
+
+        # Semantic learning: Record action events
+        if action != "hold" and "Executed" in outcome:
+            self.memory.add_semantic(f"Last successful action was {action} at {datetime.utcnow().hour}:00")
+        elif "Error" in outcome:
+            self.memory.add_semantic(f"Detected execution error at {datetime.utcnow().hour}:00: {outcome}")
+
     async def manage_positions(self):
         positions = await self.exchange.get_open_positions()
         active_coins = [p['coin'] for p in positions]
@@ -83,68 +167,45 @@ class AutonomousHedgeFund:
                     if is_ratchet:
                         self.active_stops[coin]['stop_price'] = new_stop
                         await self.exchange.update_stop_loss(coin, abs(sz), new_stop, side)
-                        await self.telegram.send_message(f"📈 *Ratchet*: {coin} {side} stop -> {new_stop:.2f}")
                         self._save_state()
-
-    async def handle_daily_report(self):
-        now = datetime.utcnow()
-        if now.hour == 0 and self.hourly_reports:
-            report = await self.advisor.generate_daily_report(self.hourly_reports)
-            await self.telegram.send_message(f"📋 *Daily Report*\n{report}")
-            self.hourly_reports = []
-            self.daily_start_balance = await self.exchange.get_wallet_balance()
 
     async def run(self):
         asyncio.create_task(self.telegram.run(self))
-        print("McMoney v2.6: Agentic Core Online.")
+        print("McMoney v2.8: Autonomous Agentic Core Online.")
 
         while True:
             if not self.is_paused:
+                # Guardrail: Circuit breaker for consecutive failures
+                if self.consecutive_failures >= self.MAX_CONSECUTIVE_FAILURES:
+                    await self.telegram.send_message("🚨 *Critical Failure*: Too many consecutive errors. Halting bot.")
+                    self.is_paused = True
+                    continue
+
                 if await self.check_daily_loss():
                     self.is_paused = True
                     continue
 
-                market_context = await self.context_server.get_compressed_context()
-                short_memory = await self.context_server.get_short_term_memory(self.history_logs)
+                # 1. PLAN
+                plan_report = await self.plan_step()
 
-                advisor_report = await self.advisor.analyze(
-                    market_context=market_context,
-                    memory=short_memory
-                )
-                self.hourly_reports.append(advisor_report)
-                await self.logger.log_advisor_report(advisor_report)
+                # 2. EXECUTE
+                exec_result = await self.execute_step()
 
-                self.dynamic_params = advisor_report.get('tuning', {})
+                # 3. REFLECT
+                await self.reflect_step(plan_report, exec_result)
 
-                await self.manage_positions()
-                decision = await self.engine.decide(dynamic_params=self.dynamic_params)
+                self.step_counter += 1
 
-                if decision["action"] in ["long", "short"]:
-                    positions = await self.exchange.get_open_positions()
-                    if not any(p['coin'] == "BTC" for p in positions):
-                        order = await self.exchange.place_order(
-                            symbol="BTC-USDT",
-                            side=decision["action"],
-                            size_pct=decision["size_pct"]
-                        )
-                        self.active_stops["BTC"] = {
-                            "stop_price": decision["stop_loss"],
-                            "atr": decision.get("atr", 0),
-                            "atr_mult": decision.get("atr_mult", 3.0)
-                        }
-                        self._save_state()
-                        await self.exchange.update_stop_loss("BTC", order.get("size", 0), decision["stop_loss"], decision["action"])
+                # Progress Tracking: Periodic report
+                if self.step_counter % 24 == 0:
+                    now = datetime.utcnow()
+                    if self.hourly_reports:
+                        report = await self.advisor.generate_daily_report(self.hourly_reports)
+                        await self.telegram.send_message(f"📋 *Daily Report*\n{report}")
+                        self.hourly_reports = []
+                        self.daily_start_balance = await self.exchange.get_wallet_balance()
 
-                        self.history_logs.append({"action": decision["action"], "coin": "BTC", "ts": datetime.utcnow().isoformat()})
-                        await self.logger.log_trade(decision, order)
-                        await self.telegram.send_message(
-                            f"🚀 *AI-Trade*: {decision['action'].upper()} BTC\n"
-                            f"Stop: {decision['stop_loss']:.2f}\n"
-                            f"Context: {advisor_report.get('summary')[:100]}..."
-                        )
-
-                await self.handle_daily_report()
-
+            # Wait 1 hour, but check for pause every 10 seconds
             for _ in range(360):
                 await asyncio.sleep(10)
                 if self.is_paused: continue
@@ -155,6 +216,7 @@ class AutonomousHedgeFund:
     def resume(self):
         self.is_paused = False
         self.daily_start_balance = None
+        self.consecutive_failures = 0
 
 if __name__ == "__main__":
     fund = AutonomousHedgeFund()
