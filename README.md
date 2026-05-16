@@ -1,26 +1,29 @@
-# McMoney v2.8: The Goal-Driven Autonomous Agent
+# McMoney v2.8: The Goal-Driven Autonomous Hedge Fund
 
-McMoney v2.8 is an **Autonomous Agentic Hedge Fund** built on the principles of goal-driven autonomy. It replaces static bot scripts with a robust Planner-Executor-Reflector (PER) architecture.
+McMoney is an autonomous agentic hedge fund built on the principles of goal-driven autonomy. It replaces static bot scripts with a robust **Planner-Executor-Reflector (PER)** architecture, trading perpetuals on Hyperliquid.
 
-## 🚀 Key Features: Autonomy Mindset
-- **Goal-Driven**: Moves from "how" (scripts) to "what" (objectives). The agent plans its own path based on the market regime.
-- **PER Architecture**: Every hourly cycle involves a formal Plan, Execution via strict tools, and Reflection on the outcome to improve future decisions.
-- **Memory Architecture**: Persistent episodic and semantic memory allows the bot to "learn" from past trades and store verified market facts.
-- **Microstructure-Aware**: Uses Order Book Imbalance (OBI) to confirm high-conviction trend entries.
+## 🚀 Key Features
+- **Goal-Driven Autonomy**: Moves from "how" (scripts) to "what" (objectives).
+- **PER Architecture**: Planning, Execution, and Reflection in every cycle.
+- **Memory System**: Episodic and Semantic memory for continuous adaptation.
+- **Microstructure-Aware**: Order Book Imbalance (OBI) confirmation filters.
+- **Professional Risk Management**: ATR trailing stops, daily drawdown limits, and hard-coded tool guardrails.
 
-## 🧠 Core Building Blocks
-- **Planner**: LLM-based reasoning engine that tunes parameters and analyzes context.
-- **Executor**: Deterministic engine for order execution and position management.
-- **Reflector**: Feedback loop that updates episodic memory with trade results.
-- **Guardrails**: Hard-coded risk limits (MAX_RISK_PCT) and circuit breakers (drawdown + failure count) that live outside the model's influence.
+## 🧠 System Overview
+- **Brain**: LLM-based reasoning for dynamic parameter tuning (advisors/).
+- **Execution Engine**: Deterministic trend-following and OBI logic (strategies/).
+- **Context Server**: Token-efficient data aggregation (utils/context_server.py).
+- **Communication**: Full Telegram bot control interface (utils/telegram_bot.py).
 
 ## 🛠️ Getting Started
 1. **Setup**: `pip install -r requirements.txt`
 2. **Configure**: Fill `.env` with Telegram and Hyperliquid keys.
 3. **Deploy**: `docker-compose up --build` or one-click to Railway.
 
-## 📈 Roadmap
-- **v2.0**: Professional Trend-Following.
-- **v2.7**: Microstructure (OBI).
-- **v2.8**: **Planner-Executor-Reflector (PER) Loop & Memory** (Current).
-- **v3.0**: Full Neuro-Symbolic Autonomy.
+## 📖 Detailed Documentation
+- [Full System Documentation](DOCUMENTATION.md) - Architecture, Tech Stack, and Safety.
+- [Alpha Roadmap](ALPHA_ROADMAP.md) - The path to world-class trading.
+- [Strategy Report](STRATEGY_REPORT.md) - Quantitative logic and OBI formulas.
+
+---
+*Built on the principles of Dhivya Nagasubramanian (2026).*

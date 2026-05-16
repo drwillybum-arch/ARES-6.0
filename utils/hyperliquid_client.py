@@ -66,6 +66,18 @@ class HyperliquidTestnet:
             print(f"Error fetching mid price: {e}")
             return None
 
+    async def get_funding_rate(self, coin):
+        """Fetch the latest funding rate for a coin"""
+        loop = asyncio.get_running_loop()
+        try:
+            funding_history = await loop.run_in_executor(None, self.info.funding_history, coin)
+            if funding_history:
+                return float(funding_history[0]['fundingRate'])
+            return 0.0
+        except Exception as e:
+            print(f"Error fetching funding rate: {e}")
+            return 0.0
+
     async def get_l2_snapshot(self, coin):
         loop = asyncio.get_running_loop()
         try:
@@ -89,6 +101,9 @@ class HyperliquidTestnet:
         is_buy = (side == "long")
         try:
             price = await self.get_mid_price(coin)
+            if price is None:
+                raise ValueError(f"Could not get price for {coin}")
+
             balance = await self.get_wallet_balance()
             usd_size = balance * (safe_size_pct / 100.0)
             sz = usd_size / price

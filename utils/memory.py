@@ -9,9 +9,16 @@ class AgentMemory:
     - Long-term (Episodic): Past events and outcomes (what worked/failed).
     - Long-term (Semantic): Verified facts and domain knowledge.
     """
-    def __init__(self, data_dir="/app/data"):
-        self.data_dir = data_dir
-        os.makedirs(self.data_dir, exist_ok=True)
+    def __init__(self, data_dir=None):
+        self.data_dir = data_dir or os.getenv("LOG_DIR", "/app/data")
+        # In local dev, /app/data might not be writable
+        if not os.path.exists(self.data_dir):
+            try:
+                os.makedirs(self.data_dir, exist_ok=True)
+            except:
+                self.data_dir = "data"
+                os.makedirs(self.data_dir, exist_ok=True)
+
         self.episodic_file = os.path.join(self.data_dir, "memory_episodic.json")
         self.semantic_file = os.path.join(self.data_dir, "memory_semantic.json")
 
